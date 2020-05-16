@@ -25,7 +25,7 @@ toolbar = DebugToolbarExtension(app)
 connect_db(app)
 
 
-##############################################################################
+########################################################################
 # User signup/login/logout
 
 
@@ -78,7 +78,7 @@ def signup():
             db.session.commit()
 
         except IntegrityError:
-            flash("Username already taken", 'danger')
+            flash("Username already taken", 'danger text-center')
             return render_template('users/signup.html', form=form)
 
         do_login(user)
@@ -101,10 +101,10 @@ def login():
 
         if user:
             do_login(user)
-            flash(f"Hello, {user.username}!", "success")
+            flash(f"Hello, {user.username}!", 'success  text-center')
             return redirect("/")
 
-        flash("Invalid credentials.", 'danger')
+        flash("Invalid credentials.", 'danger text-center')
 
     return render_template('users/login.html', form=form)
 
@@ -113,10 +113,13 @@ def login():
 def logout():
     """Handle logout of user."""
 
-    # IMPLEMENT THIS
+    do_logout()
+    flash('Goodbye!', 'success text-center')
+
+    return redirect('/login')
 
 
-##############################################################################
+########################################################################
 # General user routes:
 
 @app.route('/users')
@@ -158,7 +161,7 @@ def show_following(user_id):
     """Show list of people this user is following."""
 
     if not g.user:
-        flash("Access unauthorized.", "danger")
+        flash("Access unauthorized.", "danger text-center")
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
@@ -170,7 +173,7 @@ def users_followers(user_id):
     """Show list of followers of this user."""
 
     if not g.user:
-        flash("Access unauthorized.", "danger")
+        flash("Access unauthorized.", "danger text-center")
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
@@ -182,7 +185,7 @@ def add_follow(follow_id):
     """Add a follow for the currently-logged-in user."""
 
     if not g.user:
-        flash("Access unauthorized.", "danger")
+        flash("Access unauthorized.", "danger text-center")
         return redirect("/")
 
     followed_user = User.query.get_or_404(follow_id)
@@ -197,7 +200,7 @@ def stop_following(follow_id):
     """Have currently-logged-in-user stop following this user."""
 
     if not g.user:
-        flash("Access unauthorized.", "danger")
+        flash("Access unauthorized.", "danger text-center")
         return redirect("/")
 
     followed_user = User.query.get(follow_id)
@@ -211,7 +214,12 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
 
-    # IMPLEMENT THIS
+    if not g.user:
+        flash("Access unauthorized.", "danger text-center")
+        return redirect("/")
+
+    form = 
+    return render_template('edit.html', form=form)
 
 
 @app.route('/users/delete', methods=["POST"])
@@ -219,7 +227,7 @@ def delete_user():
     """Delete user."""
 
     if not g.user:
-        flash("Access unauthorized.", "danger")
+        flash("Access unauthorized.", "danger text-center")
         return redirect("/")
 
     do_logout()
@@ -241,7 +249,7 @@ def messages_add():
     """
 
     if not g.user:
-        flash("Access unauthorized.", "danger")
+        flash("Access unauthorized.", "danger text-center")
         return redirect("/")
 
     form = MessageForm()
@@ -269,7 +277,7 @@ def messages_destroy(message_id):
     """Delete a message."""
 
     if not g.user:
-        flash("Access unauthorized.", "danger")
+        flash("Access unauthorized.", "danger text-center")
         return redirect("/")
 
     msg = Message.query.get(message_id)
