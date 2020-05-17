@@ -1,1 +1,2 @@
 1. Installed email validator to fix wtforms bug
+2. Index.html had an extra ">" after a form tag.

@@ -26,7 +26,7 @@ toolbar = DebugToolbarExtension(app)
 connect_db(app)
 
 
-########################################################################
+###################################################################
 # User signup/login/logout
 
 
@@ -120,7 +120,7 @@ def logout():
     return redirect('/login')
 
 
-########################################################################
+###################################################################
 # General user routes:
 
 @app.route('/users')
@@ -223,17 +223,25 @@ def profile():
     form = EditProfileForm(obj=user)
 
     if form.validate_on_submit():
-        
-        user.username=form.username.data
-        user.email=form.email.data
-        user.image_url=form.image_url.data or User.image_url.default.arg
-        user.header_image_url=form.header_image_url.data
-        user.bio = form.bio.data
+        user = User.authenticate(form.username.data,
+                                 form.password.data)
 
-        db.session.add(user)
-        db.session.commit()
+        if user:
+            user.username=form.username.data
+            user.email=form.email.data
+            user.image_url=form.image_url.data or User.image_url.default.arg
+            user.header_image_url=form.header_image_url.data
+            user.bio = form.bio.data
 
-        return redirect(f"/users/{user.id}")
+            db.session.add(user)
+            db.session.commit()
+            
+            flash(f"Sucessfully updated!", 'success  text-center')
+            return redirect(f"/users/{user.id}")
+
+        flash("Invalid credentials.", 'danger text-center')        
+
+        return redirect("/")
     
     return render_template('users/edit.html', form=form)
 
@@ -254,7 +262,7 @@ def delete_user():
     return redirect("/signup")
 
 
-########################################################################
+###################################################################
 # Messages routes:
 
 @app.route('/messages/new', methods=["GET", "POST"])
@@ -303,7 +311,7 @@ def messages_destroy(message_id):
     return redirect(f"/users/{g.user.id}")
 
 
-##############################################################################
+###################################################################
 # Homepage and error pages
 
 
@@ -316,8 +324,14 @@ def homepage():
     """
 
     if g.user:
+        user = User.query.get_or_404(g.user.id)
+        following = [g.user.id]
+        for user in user.following:
+            following.append(user.id)
+
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_(following))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
@@ -328,7 +342,7 @@ def homepage():
         return render_template('home-anon.html')
 
 
-##############################################################################
+###################################################################
 # Turn off all caching in Flask
 #   (useful for dev; in production, this kind of stuff is typically
 #   handled elsewhere)
