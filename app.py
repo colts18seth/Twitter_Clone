@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import update
 
 from forms import UserAddForm, LoginForm, MessageForm, EditProfileForm
-from models import db, connect_db, User, Message
+from models import db, connect_db, User, Message, Likes
 
 CURR_USER_KEY = "curr_user"
 
@@ -19,7 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
 toolbar = DebugToolbarExtension(app)
 
@@ -261,6 +261,32 @@ def delete_user():
 
     return redirect("/signup")
 
+###################################################################
+# Like routes
+
+@app.route('/users/add_like/<int:message_id>', methods=["POST"])
+def add_like(message_id):
+    """ Add like """
+    
+    if not g.user:
+        flash("Access unauthorized.", "danger text-center")
+        return redirect("/")
+
+    user = User.query.get_or_404(g.user.id)
+    message = Message.query.get(message_id)
+
+    if request.method == "POST":        
+        like = Likes(user_id=user.id, message_id=message_id)
+
+        db.session.add(like)
+        db.session.commit()
+        
+        flash(f"Liked!", 'success  text-center')
+        return redirect("/")
+
+    flash("Invalid credentials.", 'danger text-center')
+    return redirect("/")
+
 
 ###################################################################
 # Messages routes:
@@ -325,6 +351,7 @@ def homepage():
 
     if g.user:
         user = User.query.get_or_404(g.user.id)
+        likes = Likes.query.all()
         following = [g.user.id]
         for user in user.following:
             following.append(user.id)
@@ -336,7 +363,7 @@ def homepage():
                     .limit(100)
                     .all())
 
-        return render_template('home.html', messages=messages)
+        return render_template('home.html', messages=messages, likes=likes)
 
     else:
         return render_template('home-anon.html')
