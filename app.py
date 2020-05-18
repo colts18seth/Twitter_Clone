@@ -3,7 +3,6 @@ import os
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import update
 
 from forms import UserAddForm, LoginForm, MessageForm, EditProfileForm
 from models import db, connect_db, User, Message, Likes
@@ -223,7 +222,7 @@ def profile():
     form = EditProfileForm(obj=user)
 
     if form.validate_on_submit():
-        user = User.authenticate(form.username.data,
+        user = User.authenticate(user.username,
                                  form.password.data)
 
         if user:
@@ -233,7 +232,6 @@ def profile():
             user.header_image_url=form.header_image_url.data
             user.bio = form.bio.data
 
-            db.session.add(user)
             db.session.commit()
             
             flash(f"Sucessfully updated!", 'success  text-center')
@@ -264,27 +262,38 @@ def delete_user():
 ###################################################################
 # Like routes
 
+@app.route('/users/<int:user_id>/likes')
+def show_likes(user_id):
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    user = User.query.get_or_404(user_id)
+    return render_template('users/likes.html', user=user, likes=user.likes)
+
+
+
 @app.route('/users/add_like/<int:message_id>', methods=["POST"])
 def add_like(message_id):
-    """ Add like """
+    """ Add/Remove like """
     
     if not g.user:
         flash("Access unauthorized.", "danger text-center")
         return redirect("/")
 
-    user = User.query.get_or_404(g.user.id)
-    message = Message.query.get(message_id)
+    liked_message = Message.query.get_or_404(message_id)
+    if liked_message.user_id == g.user.id:
+        return abort(403)
 
-    if request.method == "POST":        
-        like = Likes(user_id=user.id, message_id=message_id)
+    user_likes = g.user.likes
 
-        db.session.add(like)
-        db.session.commit()
-        
-        flash(f"Liked!", 'success  text-center')
-        return redirect("/")
+    if liked_message in user_likes:
+        g.user.likes = [like for like in user_likes if like != liked_message]
+    else:
+        g.user.likes.append(liked_message)
 
-    flash("Invalid credentials.", 'danger text-center')
+    db.session.commit()
+
     return redirect("/")
 
 
@@ -350,8 +359,8 @@ def homepage():
     """
 
     if g.user:
+        likes = [msg.id for msg in g.user.likes]
         user = User.query.get_or_404(g.user.id)
-        likes = Likes.query.all()
         following = [g.user.id]
         for user in user.following:
             following.append(user.id)
